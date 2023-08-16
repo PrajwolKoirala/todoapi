@@ -18,15 +18,16 @@ app.get("/todos",async (req,res)=>{
         data:todos
     })
 })
-app.post("/todos", async (req, res) => {
+app.post("/todos", async (req, res,next) => {
     try {
         const todo = new Todo(req.body);
         await todo.validate(); // This will trigger schema validation
         await todo.save();
         res.send("created");
     } catch (err) {
-        console.log(err.message);
-        res.status(400).send("Bad Request");
+        // console.log(err.message);
+        // res.status(400).send("Bad Request");
+        next(err);
     }
 });
 
@@ -62,15 +63,31 @@ app.use((req,res)=> {
 
 app.use((err,req,res,next) => {
     console.log(err.message);
+
+    console.log("Error Object:", err);
     console.log(err.name);
+let errors = null;
+console.log(err.errors);
+
     let status = 500;
     let msg = "Server Error"
-    if (err.name == "ValidationError"){
+    if (err.name === "ValidationError"){
         status = 400;
         msg = "bad request"
+
+        let error_arr = Object.entries(err.errors)
+        let temp = []
+        error_arr.forEach(el => {
+            let obj = {}
+            obj.params = el[0]
+            obj.msg = el[1].message
+            temp.push(obj)
+        });
+        errors = temp;
     }
+    res.status(status).send({msg: msg , errors})
 })
 
-app.listen(8080, () => {
+app.listen(8090, () => {
     console.log("server started");
 });
